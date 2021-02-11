@@ -3,8 +3,18 @@
 shopt -s nullglob globstar
 
 typeit=0
+otp=0
+field=0
 if [[ $1 == "--type" ]]; then
 	typeit=1
+	shift
+fi
+if [[ $1 == "--otp" ]]; then
+	otp=1
+	shift
+fi
+if [[ $1 == "--field" ]]; then
+	field=1
 	shift
 fi
 
@@ -13,11 +23,25 @@ password_files=( "$prefix"/**/*.gpg )
 password_files=( "${password_files[@]#"$prefix"/}" )
 password_files=( "${password_files[@]%.gpg}" )
 
+#echo $1
+#echo $@
+#echo $#
+if [[ $# -eq 1 ]]; then
+	option=$1
+	shift
+fi
+
 password=$(printf '%s\n' "${password_files[@]}" | dmenu "$@")
 
 [[ -n $password ]] || exit
 
-if [[ $typeit -eq 0 ]]; then
+if [[ $otp -eq 1 ]]; then
+	pass otp -c "$password" 2>/dev/null
+elif [[ $field -eq 1 ]]; then
+	#echo 'pass "$password" | shyaml get-value $option 2>/dev/null'
+	# See: /usr/bin/pass on line 153 (function 'clip()')
+	pass show "$password" | shyaml get-value $option | xclip -selection clipboard 2>/dev/null & disown
+elif [[ $typeit -eq 0 ]]; then
 	pass show -c "$password" 2>/dev/null
 else
 	pass show "$password" | { IFS= read -r pass; printf %s "$pass"; } |
